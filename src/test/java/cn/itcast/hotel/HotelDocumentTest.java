@@ -5,10 +5,15 @@ import cn.itcast.hotel.pojo.HotelDoc;
 import cn.itcast.hotel.service.IHotelService;
 import com.alibaba.fastjson.JSON;
 import org.apache.http.HttpHost;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.get.GetRequest;
+import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +37,7 @@ public class HotelDocumentTest {
     private IHotelService hotelService;
     private RestHighLevelClient client;
 
+    //新增文档
     @Test
     public void testAddDoc() throws IOException {
         //根据id查询
@@ -46,6 +52,36 @@ public class HotelDocumentTest {
         client.index(request, RequestOptions.DEFAULT);
     }
 
+    //根据id查询文档
+    @Test
+    public void testGetDocById() throws IOException {
+        GetRequest request = new GetRequest("hotel","609372");
+        GetResponse response = client.get(request, RequestOptions.DEFAULT);
+        String json = response.getSourceAsString();
+        HotelDoc hotelDoc = JSON.parseObject(json, HotelDoc.class);
+        System.out.println(hotelDoc);
+    }
+    //根据id局部更新文档
+    @Test
+    public void testUpdateDocById() throws IOException {
+        //1 创建请求
+        UpdateRequest request = new UpdateRequest("hotel","609372");
+        //2 设置请求参数
+        request.doc(
+                "price","551",
+                "starName","五星"
+        );
+        //3 发送请求
+        client.update(request,RequestOptions.DEFAULT);
+    }
+
+    //删除文档
+    @Test
+    public void testDeleteDocById() throws IOException {
+        DeleteRequest request = new DeleteRequest("hotel","609372");
+
+        client.delete(request,RequestOptions.DEFAULT);
+    }
     @BeforeEach
     public void setUp(){
         this.client = new RestHighLevelClient(RestClient.builder(
