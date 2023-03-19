@@ -5,6 +5,7 @@ import cn.itcast.hotel.pojo.HotelDoc;
 import cn.itcast.hotel.service.IHotelService;
 import com.alibaba.fastjson.JSON;
 import org.apache.http.HttpHost;
+import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -13,7 +14,7 @@ import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.GetIndexRequest;
+import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * @Projectname: hotel-demo
@@ -73,6 +76,21 @@ public class HotelDocumentTest {
         );
         //3 发送请求
         client.update(request,RequestOptions.DEFAULT);
+    }
+
+    //批量操作文档
+    @Test
+    public void testBulkRequest() throws IOException {
+        List<Hotel> list = hotelService.list();
+        BulkRequest bulkRequest = new BulkRequest();
+        list.forEach(item ->{
+            HotelDoc hotelDoc = new HotelDoc(item);
+            bulkRequest.add(new IndexRequest("hotel")
+                    .id(hotelDoc.getId().toString())
+                    .source(JSON.toJSONString(hotelDoc),XContentType.JSON));
+
+        });
+        client.bulk(bulkRequest,RequestOptions.DEFAULT);
     }
 
     //删除文档
