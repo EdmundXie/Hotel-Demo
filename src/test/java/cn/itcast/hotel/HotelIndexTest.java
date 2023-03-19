@@ -36,7 +36,7 @@ public class HotelIndexTest {
 
     //新增索引（表）
     @Test
-    public void createHotelIndex() throws IOException {
+    public void testCreateHotelIndex() throws IOException {
         //1.创建request对象
         CreateIndexRequest request = new CreateIndexRequest("hotel");
         //2.给request设值
@@ -47,14 +47,14 @@ public class HotelIndexTest {
 
     //删除索引
     @Test
-    public void deleteHotelIndex() throws IOException {
+    public void testDeleteHotelIndex() throws IOException {
         DeleteIndexRequest request = new DeleteIndexRequest("hotel");
         restHighLevelClient.indices().delete(request,RequestOptions.DEFAULT);
     }
 
     //判断索引是否存在
     @Test
-    public void existHotelIndex() throws IOException {
+    public void testExistHotelIndex() throws IOException {
         GetIndexRequest request = new GetIndexRequest("hotel");
         boolean exists = restHighLevelClient.indices().exists(request, RequestOptions.DEFAULT);
         System.out.println(exists);
