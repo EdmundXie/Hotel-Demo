@@ -72,7 +72,7 @@ public class HotelDocumentTest {
         //2 设置请求参数
         request.doc(
                 "price","551",
-                "starName","五星"
+                "starName","五星级"
         );
         //3 发送请求
         client.update(request,RequestOptions.DEFAULT);
