@@ -3,6 +3,11 @@ package cn.itcast.hotel;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.apache.http.HttpHost;
+import org.apache.http.client.config.RequestConfig;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,4 +21,20 @@ public class HotelDemoApplication {
         SpringApplication.run(HotelDemoApplication.class, args);
     }
 
+    @Bean
+    public RestHighLevelClient client(){
+        return new RestHighLevelClient(RestClient.builder(
+                new HttpHost("124.222.138.40", 9200))
+                    .setRequestConfigCallback(
+                    new RestClientBuilder.RequestConfigCallback() {
+                        @Override
+                        public RequestConfig.Builder customizeRequestConfig(
+                                RequestConfig.Builder requestConfigBuilder) {
+                            return requestConfigBuilder
+                                    .setConnectTimeout(5000)
+                                    .setSocketTimeout(60000);
+                        }
+                    }
+        ));
+    }
 }
