@@ -3,11 +3,13 @@ package cn.itcast.hotel;
 import cn.itcast.hotel.pojo.HotelDoc;
 import com.alibaba.fastjson.JSON;
 import org.apache.http.HttpHost;
+import org.apache.lucene.queryparser.xml.builders.BooleanQueryBuilder;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -28,11 +30,40 @@ import java.util.List;
  * @Email: 609031809@qq.com
  * @Description:
  */
-@SpringBootTest
 public class HotelSearchTest {
 
     private RestHighLevelClient client;
 
+    //测试bool
+    @Test
+    public void testBool() throws IOException {
+        //1.准备request对象
+        SearchRequest request = new SearchRequest("hotel");
+        //2.设置request对象
+        BoolQueryBuilder booleanQueryBuilder = QueryBuilders.boolQuery();
+        booleanQueryBuilder.must(QueryBuilders.matchQuery("all","如家"));
+        booleanQueryBuilder.filter(QueryBuilders.rangeQuery("price").lte(250));
+        request.source().query(booleanQueryBuilder).size(1000);
+        //3.发送request
+        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+
+        handleResponse(response);
+    }
+
+    //测试match
+    @Test
+    public void testMatch() throws IOException {
+        //1.准备request对象
+        SearchRequest request = new SearchRequest("hotel");
+        //2.设置request对象
+        request.source().query(QueryBuilders.matchQuery("all","如家")).size(1000);
+        //3.发送request
+        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+
+        handleResponse(response);
+    }
+
+    //测试matchall
     @Test
     public void testMatchAll() throws IOException {
         //1.准备request对象
@@ -42,6 +73,10 @@ public class HotelSearchTest {
         //3.发送request
         SearchResponse response = client.search(request, RequestOptions.DEFAULT);
 
+        handleResponse(response);
+    }
+
+    private void handleResponse(SearchResponse response) {
         //解析相应成java对象
         SearchHits hits = response.getHits();
         //查询条数
@@ -57,9 +92,9 @@ public class HotelSearchTest {
             hotelDocList.add(hotelDoc);
         }
 
-        //打印结果
-        System.out.println(hotelDocList.get(1));
-//        System.out.println(response);
+//        打印结果
+        System.out.println("total docs: "+total);
+        System.out.println(hotelDocList.get(1)+" \n"+hotelDocList.get(2));
     }
 
     @BeforeEach
