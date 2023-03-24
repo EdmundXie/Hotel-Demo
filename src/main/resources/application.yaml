@@ -7,7 +7,7 @@ spring:
     password: xjh990403
     driver-class-name: com.mysql.jdbc.Driver
   rabbitmq:
-    host: 124.222.138.40
+    host: localhost
     port: 5672
     username: itcast
     password: 123321
