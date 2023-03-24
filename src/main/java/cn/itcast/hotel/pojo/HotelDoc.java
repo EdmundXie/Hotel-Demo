@@ -3,6 +3,8 @@ package cn.itcast.hotel.pojo;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 public class HotelDoc {
@@ -19,6 +21,7 @@ public class HotelDoc {
     private String pic;
     private Object distance;
     private String isAD;
+    private List<String> suggestion;
 
     public HotelDoc(Hotel hotel) {
         this.id = hotel.getId();

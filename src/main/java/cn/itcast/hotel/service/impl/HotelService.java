@@ -21,6 +21,8 @@ import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
@@ -32,6 +34,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,19 +48,13 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
         try {
             int page = requestParams.getPage();
             int size = requestParams.getSize();
-            String key = requestParams.getKey();
             String sortBy = requestParams.getSortBy();
-            String brand     = requestParams.getBrand();
-            String city      = requestParams.getCity();
-            String starName  = requestParams.getStarName();
-            Integer minPrice = requestParams.getMinPrice();
-            Integer maxPrice = requestParams.getMaxPrice();
             String location  = requestParams.getLocation();
             //1.准备request对象
             SearchRequest request = new SearchRequest("hotel");
 
             //构建bool查询
-            BoolQueryBuilder boolQuery = buildBoolQuery(key, brand, city, starName, minPrice, maxPrice);
+            BoolQueryBuilder boolQuery = buildBoolQuery(requestParams);
 
             //新增广告算分控制，构建functionScore查询
             FunctionScoreQueryBuilder functionScoreQuery = buildFunctionScoreQuery(boolQuery);
@@ -103,36 +100,36 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
         return functionScoreQuery;
     }
 
-    private BoolQueryBuilder buildBoolQuery(String key, String brand, String city, String starName, Integer minPrice, Integer maxPrice) {
+    private BoolQueryBuilder buildBoolQuery(RequestParams requestParams) {
         //1.1 准备query对象
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
 
         //2.设置request对象
 
-        if(StringUtils.isEmpty(key)){
+        if(StringUtils.isEmpty(requestParams.getKey())){
             boolQuery.must(QueryBuilders.matchAllQuery());
         }
         else{
-            boolQuery.must(QueryBuilders.matchQuery("all", key));
+            boolQuery.must(QueryBuilders.matchQuery("all", requestParams.getKey()));
         }
 
         //2.1 filter过滤器
 
         //品牌条件
-        if(!StringUtils.isEmpty(brand)){
-            boolQuery.filter(QueryBuilders.termQuery("brand", brand));
+        if(!StringUtils.isEmpty(requestParams.getBrand())){
+            boolQuery.filter(QueryBuilders.termQuery("brand", requestParams.getBrand()));
         }
         //星级条件
-        if(!StringUtils.isEmpty(starName)){
-            boolQuery.filter(QueryBuilders.termQuery("starName", starName));
+        if(!StringUtils.isEmpty(requestParams.getStarName())){
+            boolQuery.filter(QueryBuilders.termQuery("starName", requestParams.getStarName()));
         }
         //城市条件
-        if(!StringUtils.isEmpty(city)){
-            boolQuery.filter(QueryBuilders.termQuery("city", city));
+        if(!StringUtils.isEmpty(requestParams.getCity())){
+            boolQuery.filter(QueryBuilders.termQuery("city", requestParams.getCity()));
         }
         //价格条件
-        if(!StringUtils.isEmpty(minPrice)&&!StringUtils.isEmpty(maxPrice)){
-            boolQuery.filter(QueryBuilders.rangeQuery("price").gte(minPrice).lte(maxPrice));
+        if(!StringUtils.isEmpty(requestParams.getMinPrice())&&!StringUtils.isEmpty(requestParams.getMaxPrice())){
+            boolQuery.filter(QueryBuilders.rangeQuery("price").gte(requestParams.getMinPrice()).lte(requestParams.getMaxPrice()));
         }
         return boolQuery;
 
@@ -173,5 +170,63 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
         result.setHotels(hotelDocList);
         result.setTotal(total);
         return result;
+    }
+
+    /**
+     * 查询城市、星级、品牌的聚合结果
+     * @return 聚合结果, format: {"city" : ["shanghai","beijing"],"starName" : ["five stars","four stars"], ...}
+     */
+    @Override
+    public Map<String, List<String>> filters(RequestParams requestParams) {
+        try {
+            SearchRequest request = new SearchRequest("hotel");
+            BoolQueryBuilder boolQuery = buildBoolQuery(requestParams);
+            request.source().query(boolQuery);
+            request.source().size(0);
+            buildAggregation(request);
+
+            Map<String, List<String>> aggResult = new HashMap<>();
+            SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+            List<String> aggByBrand = getAggByName(response,"brandAgg");
+            aggResult.put("brand",aggByBrand);
+            List<String> aggByCity = getAggByName(response, "cityAgg");
+            aggResult.put("city",aggByCity);
+            List<String> aggByStarName= getAggByName(response,"starNameAgg");
+            aggResult.put("starName",aggByStarName);
+
+            return aggResult;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private List<String> getAggByName(SearchResponse response, String aggName) {
+        Terms brandTerms = response.getAggregations().get(aggName);
+        List<? extends Terms.Bucket> buckets = brandTerms.getBuckets();
+        List<String> keys = new ArrayList<>();
+        if(!buckets.isEmpty()){
+            buckets.forEach(item ->{
+                String key = item.getKeyAsString();
+                if(!StringUtils.isEmpty(key)){
+                    keys.add(key);
+                }
+            });
+        }
+        return keys;
+    }
+
+    private void buildAggregation(SearchRequest request) {
+        request.source().aggregation(AggregationBuilders
+                .terms("brandAgg")
+                .field("brand")
+                .size(50));
+        request.source().aggregation(AggregationBuilders
+                .terms("cityAgg")
+                .field("city")
+                .size(50));
+        request.source().aggregation(AggregationBuilders
+                .terms("starNameAgg")
+                .field("starName")
+                .size(50));
     }
 }
