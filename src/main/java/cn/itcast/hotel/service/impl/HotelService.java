@@ -9,12 +9,16 @@ import cn.itcast.hotel.service.IHotelService;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.lucene.queryparser.xml.builders.BooleanQueryBuilder;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.unit.DistanceUnit;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
@@ -233,6 +237,39 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
             });
 
             return result;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void insertById(Long id) {
+        try {
+            //1 创建请求
+            IndexRequest request = new IndexRequest("hotel").id(id.toString());
+            //2 设置请求参数
+
+            //2.1 取得hotelDoc对象
+            Hotel hotel = this.getById(id);
+            HotelDoc hotelDoc = new HotelDoc(hotel);
+
+            //2.2 将hotelDoc对象转为JSON格式
+            String json = JSON.toJSONString(hotelDoc);
+
+            request.source(json, XContentType.JSON);
+            //3 发送请求
+            client.index(request,RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        try {
+            DeleteRequest request = new DeleteRequest("hotel",id.toString());
+
+            client.delete(request,RequestOptions.DEFAULT);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
