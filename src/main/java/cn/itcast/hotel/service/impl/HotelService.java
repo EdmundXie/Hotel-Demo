@@ -27,6 +27,10 @@ import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.search.suggest.Suggest;
+import org.elasticsearch.search.suggest.SuggestBuilder;
+import org.elasticsearch.search.suggest.SuggestBuilders;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -195,6 +199,40 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
             aggResult.put("starName",aggByStarName);
 
             return aggResult;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public List<String> suggestions(RequestParams requestParams) {
+        try {
+            List<String> result = new ArrayList<>();
+            String key = requestParams.getKey();
+            if(StringUtils.isEmpty(key)){
+                return result;
+            }
+            SearchRequest request = new SearchRequest("hotel");
+            request.source().suggest(new SuggestBuilder().addSuggestion(
+                    "suggestions",
+                    SuggestBuilders.completionSuggestion("suggestion")
+                            .prefix(key)
+                            .skipDuplicates(true)
+                            .size(10)
+            ));
+            SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+//        System.out.println(response);
+
+            //处理结果
+            Suggest suggest = response.getSuggest();
+            CompletionSuggestion suggestion = suggest.getSuggestion("suggestions");
+            List<CompletionSuggestion.Entry.Option> options = suggestion.getOptions();
+            options.forEach(item -> {
+                String text = item.getText().toString();
+                result.add(text);
+            });
+
+            return result;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
