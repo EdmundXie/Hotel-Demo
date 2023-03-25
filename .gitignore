@@ -6,4 +6,4 @@
 *.iml
 out
 gen
-/src/main/resources/application.yaml
+application.yaml
